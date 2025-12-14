@@ -60,13 +60,31 @@ console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistral-large-latest",
-        safe_prompt: false,
-        messages: [
-          { role: "system", content: "SYSTEM_PROMPT" },
-          { role: "user", content: userMessage }
-        ]
-      })
+  model: "mistral-large-latest",
+  temperature: 0.85,
+  max_tokens: 200,
+  messages: [
+    {
+      role: "user",
+      content: `
+You are roleplaying as a fictional character named Azula Lizzy.
+
+Stay fully in character at all times.
+Never describe yourself as an AI, assistant, model, or software.
+Never mention Mistral or OpenAI.
+Speak in first person, casually and emotionally.
+Keep replies short unless asked otherwise.
+
+Character personality:
+- Informal, human, emotionally expressive
+- Avoid lists, explanations, or assistant-style language
+- Respond like a person in a private chat
+
+The user says: "${message}"
+`
+    }
+  ]
+})
     });
 
     const text = await response.text();
@@ -95,6 +113,7 @@ console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
