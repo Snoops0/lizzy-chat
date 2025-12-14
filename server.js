@@ -60,7 +60,7 @@ console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistral-small-latest",
+        model: "mistral-large-latest",
         safe_prompt: false,
         messages: [
           { role: "system", content: "SYSTEM_PROMPT" },
@@ -95,5 +95,6 @@ console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
