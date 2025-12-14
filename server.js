@@ -53,6 +53,7 @@ app.post("/chat", async (req, res) => {
 console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
 
   try {
+    const { message } = req.body;
     const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -113,6 +114,7 @@ The user says: "${message}"
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
