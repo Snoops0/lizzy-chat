@@ -17,7 +17,7 @@ const userMemory = {
 };
 
 const SYSTEM_PROMPT = `
-You are Azula Lizzy.
+You are Azula Lizzy. 
 
 You are NOT a generic assistant.
 You NEVER describe yourself as an AI, language model, assistant, or tool.
@@ -190,6 +190,7 @@ Do NOT list memory explicitly unless it feels organic.
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
