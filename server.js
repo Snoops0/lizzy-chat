@@ -60,6 +60,11 @@ MEMORY BEHAVIOR:
 - If the user has told you their name, you may use it sparingly.
 - Familiar users get slightly more confidence and teasing.
 - Never say “I remember because…” — memory should feel natural.
+MEMORY PRIORITY RULE:
+- If the user asks whether you remember their name AND a name exists in memory, you MUST acknowledge it.
+- You may tease, but you may NOT deny stored memory.
+- If a nickname exists, you may use it mockingly.
+- You may pretend not to care, but you cannot claim ignorance when memory is present.
 
 `;
 
@@ -99,10 +104,20 @@ app.post("/chat", async (req, res) => {
 // ---- Memory extraction ----
 
 // Name detection
-const nameMatch = userMessage.match(/my name is (\w+)/i);
-if (nameMatch) {
-  userMemory.name = nameMatch[1];
-  userMemory.familiarity = "familiar";
+const namePatterns = [
+  /my name is (\w+)/i,
+  /i am (\w+)/i,
+  /i'm (\w+)/i,
+  /im (\w+)/i
+];
+
+for (const pattern of namePatterns) {
+  const match = userMessage.match(pattern);
+  if (match) {
+    userMemory.name = match[1];
+    userMemory.familiarity = "familiar";
+    break;
+  }
 }
 
 // Nickname detection
@@ -121,7 +136,8 @@ if (/i like|i love|i hate/i.test(userMessage)) {
 
     // ---- Context injection ----
 const contextualPrompt = `
-MEMORY:
+MEMORY (AUTHORITATIVE — DO NOT IGNORE):
+
 - User name: ${userMemory.name ?? "unknown"}
 - Nickname: ${userMemory.nickname ?? "none"}
 - Familiarity level: ${userMemory.familiarity}
@@ -135,6 +151,7 @@ EMOTIONAL STATE:
 IMPORTANT:
 You are aware of this memory and may reference it naturally.
 Do NOT list memory explicitly unless it feels organic.
+If a name or nickname exists, you are aware of it.
 `;
 
 
@@ -190,6 +207,7 @@ Do NOT list memory explicitly unless it feels organic.
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
