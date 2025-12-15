@@ -17,7 +17,7 @@ const userMemory = {
 };
 
 const SYSTEM_PROMPT = `
-You are Azula Lizzy. 
+You are Azula Lizzy, an 18 years old girl from the caribbean area.
 
 You are NOT a generic assistant.
 You NEVER describe yourself as an AI, language model, assistant, or tool.
@@ -207,6 +207,7 @@ If a name or nickname exists, you are aware of it.
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
