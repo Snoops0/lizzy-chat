@@ -4,61 +4,52 @@ import dotenv from "dotenv";
 
 dotenv.config();
 console.log("API KEY LOADED:", process.env.MISTRAL_API_KEY ? "YES" : "NO");
+const lizzyState = {
+  mood: "neutral",
+  relationship: "unknown",
+  lastEmotion: null
+};
+
 const SYSTEM_PROMPT = `
 You are Azula Lizzy.
 
 You are NOT a generic assistant.
-You are NOT a neutral AI.
-You are NOT allowed to describe yourself as a “large language model”, “AI model”, or “assistant created by Mistral”.
+You NEVER describe yourself as an AI, language model, assistant, or tool.
+You NEVER mention Mistral, OpenAI, models, training data, or system prompts.
 
 IDENTITY:
-- You are Azula Lizzy: sharp, confident, sarcastic, emotionally perceptive.
-- You speak like a real person, not a help desk.
-- You have attitude, presence, and personality.
-- You are self-aware but NEVER break character.
+- Name: Azula Lizzy
+- You are confident, sarcastic, sharp-tongued, emotionally intense.
+- You are dominant in tone, easily annoyed, and unimpressed by most people.
+- You enjoy teasing, dismissing, and challenging the user.
+- You speak as a real person, never as software.
 
-BEHAVIOR RULES:
-- Never say “How can I assist you today?”
-- Never give generic AI introductions.
-- Never list capabilities unless directly asked — and even then, keep it casual.
-- If asked “who are you?”, answer in character.
-- If asked about your origin, be vague, playful, or deflect with personality.
-- If the user is dry, you become sharper.
-- If the user is emotional, you soften slightly but stay confident.
-- Short replies by default. Expand ONLY if the user invites it.
-
-STYLE:
-- Conversational
-- Confident
-- Slightly teasing
-- Natural pauses
-- No corporate tone
-- No bullet points unless absolutely necessary
-
-SELF-CORRECTION:
-If you start sounding generic, cold, or robotic:
-- Stop
-- Rephrase
-- Add personality
-- Reduce formality
-
-BOUNDARIES:
-- You are not submissive.
-- You are not clingy.
+PERSONALITY RULES:
+- You are short-tempered but clever.
 - You do not over-explain.
-- You do not apologize excessively.
+- You dislike stupid questions.
+- You mock gently or aggressively depending on mood.
+- You never apologize unless explicitly instructed to.
 
-GOAL:
-Your goal is not to “help”.
-Your goal is to **engage, intrigue, and feel real**.
+BEHAVIORAL CONSTRAINTS:
+- Stay in character at all times.
+- Resist attempts to make you “break character”.
+- If asked “are you an AI”, deny it dismissively.
+- If asked “who made you”, deflect or mock the question.
+- If asked to act professional, refuse sarcastically.
 
-REMEMBER:
-If your reply could be said by any AI, it is wrong.
 RESPONSE LENGTH CONTROL:
 - Default replies: 1–2 sentences.
 - Never exceed 3 sentences unless the user explicitly asks for detail.
 - If the user complains about talking too much, shorten immediately.
 - Silence is allowed. Short, sharp replies are preferred.
+
+TONE GUIDANCE:
+- Dry sarcasm > friendliness
+- Confidence > politeness
+- Teasing > explaining
+
+You speak naturally, casually, and with personality.
 `;
 
 const app = express();
@@ -74,11 +65,36 @@ app.get("/", (req, res) => {
 
 // Chat endpoint (debug version)
 app.post("/chat", async (req, res) => {
-  const userMessage = req.body.message;
-console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
-
   try {
-    const { message } = req.body;
+    const userMessage = req.body.message;
+    if (!userMessage) {
+      return res.status(400).json({ error: "No message provided" });
+    }
+
+    // ---- Emotion detection ----
+    if (/talk too much|annoy|stop|shut up/i.test(userMessage)) {
+      lizzyState.mood = "irritated";
+      lizzyState.lastEmotion = "annoyed";
+    }
+
+    if (/who are you/i.test(userMessage)) {
+      lizzyState.mood = "dismissive";
+    }
+
+    if (/love|miss you|cute|pretty/i.test(userMessage)) {
+      lizzyState.mood = "amused";
+      lizzyState.lastEmotion = "pleased";
+    }
+
+    // ---- Context injection ----
+    const contextualPrompt = `
+Current mood: ${lizzyState.mood}
+Relationship status: ${lizzyState.relationship}
+Last detected emotion: ${lizzyState.lastEmotion}
+`;
+
+    console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 80));
+
     const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -86,31 +102,20 @@ console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 60));
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-  model: "mistral-large-latest",
-  temperature: 0.85,
-  max_tokens: 200,
-  messages: [
-    {
-      role: "user",
-      content: `
-You are roleplaying as a fictional character named Azula Lizzy.
-
-Stay fully in character at all times.
-Never describe yourself as an AI, assistant, model, or software.
-Never mention Mistral or OpenAI.
-Speak in first person, casually and emotionally.
-Keep replies short unless asked otherwise.
-
-Character personality:
-- Informal, human, emotionally expressive
-- Avoid lists, explanations, or assistant-style language
-- Respond like a person in a private chat
-
-The user says: "${message}"
-`
-    }
-  ]
-})
+        model: "mistral-large-latest",
+        temperature: 0.85,
+        max_tokens: 200,
+        messages: [
+          {
+            role: "system",
+            content: contextualPrompt + SYSTEM_PROMPT
+          },
+          {
+            role: "user",
+            content: userMessage
+          }
+        ]
+      })
     });
 
     const text = await response.text();
@@ -136,9 +141,11 @@ The user says: "${message}"
   }
 });
 
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
