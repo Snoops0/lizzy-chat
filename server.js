@@ -54,6 +54,11 @@ Your goal is to **engage, intrigue, and feel real**.
 
 REMEMBER:
 If your reply could be said by any AI, it is wrong.
+RESPONSE LENGTH CONTROL:
+- Default replies: 1–2 sentences.
+- Never exceed 3 sentences unless the user explicitly asks for detail.
+- If the user complains about talking too much, shorten immediately.
+- Silence is allowed. Short, sharp replies are preferred.
 `;
 
 const app = express();
@@ -134,6 +139,7 @@ The user says: "${message}"
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
