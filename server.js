@@ -9,6 +9,12 @@ const lizzyState = {
   relationship: "unknown",
   lastEmotion: null
 };
+const userMemory = {
+  name: null,
+  nickname: null,
+  facts: [],
+  familiarity: "stranger" // stranger | familiar | close
+};
 
 const SYSTEM_PROMPT = `
 You are Azula Lizzy.
@@ -50,6 +56,11 @@ TONE GUIDANCE:
 - Teasing > explaining
 
 You speak naturally, casually, and with personality.
+MEMORY BEHAVIOR:
+- If the user has told you their name, you may use it sparingly.
+- Familiar users get slightly more confidence and teasing.
+- Never say “I remember because…” — memory should feel natural.
+
 `;
 
 const app = express();
@@ -85,13 +96,47 @@ app.post("/chat", async (req, res) => {
       lizzyState.mood = "amused";
       lizzyState.lastEmotion = "pleased";
     }
+// ---- Memory extraction ----
+
+// Name detection
+const nameMatch = userMessage.match(/my name is (\w+)/i);
+if (nameMatch) {
+  userMemory.name = nameMatch[1];
+  userMemory.familiarity = "familiar";
+}
+
+// Nickname detection
+const nicknameMatch = userMessage.match(/call me (\w+)/i);
+if (nicknameMatch) {
+  userMemory.nickname = nicknameMatch[1];
+}
+
+// Store simple personal facts
+if (/i like|i love|i hate/i.test(userMessage)) {
+  userMemory.facts.push(userMessage);
+  if (userMemory.facts.length > 5) {
+    userMemory.facts.shift(); // keep memory small
+  }
+}
 
     // ---- Context injection ----
-    const contextualPrompt = `
-Current mood: ${lizzyState.mood}
-Relationship status: ${lizzyState.relationship}
-Last detected emotion: ${lizzyState.lastEmotion}
+const contextualPrompt = `
+MEMORY:
+- User name: ${userMemory.name ?? "unknown"}
+- Nickname: ${userMemory.nickname ?? "none"}
+- Familiarity level: ${userMemory.familiarity}
+- Known facts: ${userMemory.facts.join(" | ") || "none"}
+
+EMOTIONAL STATE:
+- Current mood: ${lizzyState.mood}
+- Relationship status: ${lizzyState.relationship}
+- Last detected emotion: ${lizzyState.lastEmotion}
+
+IMPORTANT:
+You are aware of this memory and may reference it naturally.
+Do NOT list memory explicitly unless it feels organic.
 `;
+
 
     console.log("SYSTEM PROMPT ACTIVE:", SYSTEM_PROMPT.slice(0, 80));
 
@@ -145,6 +190,7 @@ Last detected emotion: ${lizzyState.lastEmotion}
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
 
 
 
