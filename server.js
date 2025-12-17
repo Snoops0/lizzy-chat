@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-
+import MistralClient from '@mistralai/mistralai';
 dotenv.config();
 
 const app = express();
@@ -156,4 +156,5 @@ app.post('/chat', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Azula Backend Online`));
+
 
