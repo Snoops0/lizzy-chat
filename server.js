@@ -112,7 +112,22 @@ If the user's input is empty or confusing, reply with:
 
 app.post('/chat', async (req, res) => {
   try {
-    const { message, tier } = req.body;
+    const { message, tier , history } = req.body;
+     const messages = [
+      { role: "system", content: `${AZULA_SYSTEM_PROMPT}\nCURRENT USER TIER: ${tier}` }
+    ];
+
+    if (history && history.length > 0) {
+      history.forEach(item => {
+        messages.push({ 
+          role: item.sender === 'user' ? 'user' : 'assistant', 
+          content: item.text 
+        });
+      });
+    }
+
+    // Add the latest message
+    messages.push({ role: "user", content: message });
     
     // 1. DYNAMICALLY INJECT THE TIER
     // Default to 'free' if no tier is provided
@@ -140,4 +155,5 @@ app.post('/chat', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Azula Backend Online`));
+
