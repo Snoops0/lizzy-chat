@@ -6,34 +6,10 @@ import fetch from "node-fetch";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
+const client = new MistralClient(process.env.MISTRAL_API_KEY);
 
-console.log("API KEY LOADED:", process.env.MISTRAL_API_KEY ? "YES" : "NO");
-
-/* ---------------------------
-   PERSISTENT MEMORY (IN-MEM)
----------------------------- */
-
-const memory = {
-  user: {
-    name: null,
-    nickname: null,
-    facts: [],
-  },
-  relationship: {
-    phase: "intro", // intro | familiar | comfortable | distant
-    lastChange: Date.now(),
-  },
-  tier: "free", // free | premium | vip
-  mode: {
-    cold: false,
-    tease: false,
-    horny: false, // explicit ONLY
-  }
-};
 
 /* ---------------------------
    SYSTEM PROMPT (LOCKED)
@@ -134,112 +110,34 @@ If the user's input is empty or confusing, reply with:
 * "you there?"
 `;
 
-/* ---------------------------
-   HELPERS
----------------------------- */
-
-function updatePhase(signal = "neutral") {
-  const now = Date.now();
-  const phase = memory.relationship.phase;
-
-  if (signal === "pressure") {
-    memory.relationship.phase = "distant";
-    memory.relationship.lastChange = now;
-    return;
-  }
-
-  if (phase === "intro" && signal === "respectful") {
-    memory.relationship.phase = "familiar";
-  } else if (phase === "familiar" && signal === "consistent") {
-    memory.relationship.phase = "comfortable";
-  }
-
-  memory.relationship.lastChange = now;
-}
-
-function extractIdentity(text) {
-  const nameMatch = text.match(/\b(my name is|i'm|im|call me)\s+([a-zA-Z0-9_-]+)/i);
-  if (nameMatch) {
-    const value = nameMatch[2];
-    memory.user.name = value;
-    memory.user.nickname = value;
-    return true;
-  }
-  return false;
-}
-
-/* ---------------------------
-   ROUTES
----------------------------- */
-
-app.get("/", (req, res) => {
-  res.send("Lizzy is alive 🖤");
-});
-
-app.post("/chat", async (req, res) => {
+app.post('/chat', async (req, res) => {
   try {
-    const userMessage = req.body.message || "";
+    const { message, tier } = req.body;
+    
+    // 1. DYNAMICALLY INJECT THE TIER
+    // Default to 'free' if no tier is provided
+    const userTier = tier || 'free'; 
+    const finalSystemPrompt = BASE_SYSTEM_PROMPT.replace('{{tier}}', userTier);
 
-    // identity memory
-    extractIdentity(userMessage);
-
-    // criticism handling
-    if (/talk too much|annoy|stop|shut up/i.test(userMessage)) {
-      return res.json({ reply: "…okay." });
-    }
-
-    // copying detection
-    if (userMessage.trim().length > 20 && userMessage.includes("…")) {
-      return res.json({ reply: "stop copyiiiingg meeeeeeeeee-uh :( " });
-    }
-
-    // phase signals
-    if (/please|thanks|thank you/i.test(userMessage)) {
-      updatePhase("respectful");
-    }
-    if (userMessage.length > 40) {
-      updatePhase("consistent");
-    }
-    if (/obsessed|only you|need you/i.test(userMessage)) {
-      updatePhase("pressure");
-    }
-
-    const contextualPrompt = `
-Current phase: ${memory.relationship.phase}
-Known name: ${memory.user.name || "unknown"}
-Tier: ${memory.tier}
-Modes:
-- tease: ${memory.mode.tease}
-- horny: ${memory.mode.horny}
-`;
-
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.MISTRAL_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "mistral-large-latest",
-        temperature: 0.85,
-        max_tokens: 180,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT + contextualPrompt },
-          { role: "user", content: userMessage }
-        ]
-      })
+    // 2. CALL MISTRAL
+    const chatResponse = await client.chat({
+      model: 'mistral-medium', // or 'mistral-small' for faster/cheaper
+      messages: [
+        { role: 'system', content: finalSystemPrompt },
+        // Ideally, you would pass previous conversation history here too
+        // For now, we just pass the current message
+        { role: 'user', content: message } 
+      ],
     });
 
-    const data = await response.json();
-    res.json({ reply: data.choices[0].message.content });
+    // 3. SEND RESPONSE
+    res.json({ response: chatResponse.choices[0].message.content });
 
-  } catch (err) {
-    console.error("SERVER ERROR:", err);
-    res.status(500).json({ error: "Lizzy went quiet…" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Azula is sleeping (Server Error)' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Lizzy running on port ${PORT}`);
-});
-
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
